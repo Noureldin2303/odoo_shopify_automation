@@ -155,9 +155,6 @@ Developed by ECOSIRE (PRIVATE) LIMITED - Enterprise Solutions Division.
             'numpy',
         ],
     },
-    'demo': [
-        'demo/shopify_demo.xml',
-    ],
     'post_init_hook': 'post_init_hook',
     'uninstall_hook': 'uninstall_hook',
 } 
