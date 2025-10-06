@@ -98,6 +98,9 @@ Developed by ECOSIRE (PRIVATE) LIMITED - Enterprise Solutions Division.
         'data/ir_cron_data.xml',
         'data/ir_sequence_data.xml',
 
+        # Wizards - Must be loaded before menu to define actions
+        'wizard/manual_sync_wizard_view.xml',
+
         # Views - Individual model views must be loaded before dashboard to define actions
         'views/shopify_instance_view.xml',
         'views/shopify_product_view.xml',
@@ -112,8 +115,6 @@ Developed by ECOSIRE (PRIVATE) LIMITED - Enterprise Solutions Division.
         'views/sale_order_views.xml',
         'views/dashboard_view.xml',
 
-        # Wizards - Must be loaded before menu to define actions
-        'wizard/manual_sync_wizard_view.xml',
 
         # Menu - Must be loaded last to reference all actions
         'views/menu.xml',
