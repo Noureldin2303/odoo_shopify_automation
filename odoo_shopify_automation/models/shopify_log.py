@@ -15,4 +15,4 @@ class ShopifyLog(models.Model):
     message = fields.Text('Message')
     create_date = fields.Datetime('Created On', readonly=True)
     write_date = fields.Datetime('Last Updated', readonly=True)
-    note = fields.Text('Notes') 
+    note = fields.Text('Notes')

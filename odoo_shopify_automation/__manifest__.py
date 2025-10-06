@@ -1,8 +1,13 @@
+# pylint: disable=manifest-required-author, manifest-deprecated-key, license-allowed
 {
-    'name': 'Odoo Shopify Connector PRO - Advanced Automation Suite',
-    'version': '18.0.2.0.0',
-    'summary': 'Enterprise-Grade Shopify-Odoo Integration with Advanced Automation & Analytics',
-    'description': '''
+    'name':
+        'Odoo Shopify Connector PRO - Advanced Automation Suite',
+    'version':
+        '18.0.2.0.0',
+    'summary':
+        'Enterprise-Grade Shopify-Odoo Integration with Advanced Automation & Analytics',
+    'description':
+        '''
 🚀 **ENTERPRISE-GRADE SHOPIFY INTEGRATION SUITE**
 
 🔗 **Core Integration Features:**
@@ -73,35 +78,26 @@ Perfect for enterprise e-commerce businesses requiring the most advanced Shopify
 
 Developed by ECOSIRE (PRIVATE) LIMITED - Enterprise Solutions Division.
     ''',
-    'author': 'ECOSIRE (PRIVATE) LIMITED',
-    'website': 'https://www.ecosire.com/',
-    'category': 'Connector',
+    'author':
+        'ECOSIRE (PRIVATE) LIMITED',
+    'website':
+        'https://www.ecosire.com/',
+    'category':
+        'Connector',
     'depends': [
-        'base', 
-        'sale_management', 
-        'stock', 
-        'account', 
-        'delivery', 
-        'mail', 
-        'web', 
-        'portal',
-        'product',
-        'purchase',
-        'hr',
-        'contacts',
-        'website',
-        'payment'
+        'base', 'sale_management', 'stock', 'account', 'delivery', 'mail', 'web', 'portal',
+        'product', 'purchase', 'hr', 'contacts', 'website', 'payment'
     ],
     'data': [
         # Security - Groups must be loaded before access rights
         'security/security.xml',
         'security/record_rules.xml',
         'security/ir.model.access.csv',
-        
+
         # Data
         'data/ir_cron_data.xml',
         'data/ir_sequence_data.xml',
-        
+
         # Views - Individual model views must be loaded before dashboard to define actions
         'views/shopify_instance_view.xml',
         'views/shopify_product_view.xml',
@@ -111,11 +107,14 @@ Developed by ECOSIRE (PRIVATE) LIMITED - Enterprise Solutions Division.
         'views/shopify_log_view.xml',
         'views/shopify_cron_view.xml',
         'views/shopify_webhook_view.xml',
+        'views/product_product_views.xml',
+        'views/product_template_views.xml',
+        'views/sale_order_views.xml',
         'views/dashboard_view.xml',
-        
+
         # Wizards - Must be loaded before menu to define actions
         'wizard/manual_sync_wizard_view.xml',
-        
+
         # Menu - Must be loaded last to reference all actions
         'views/menu.xml',
     ],
@@ -130,9 +129,12 @@ Developed by ECOSIRE (PRIVATE) LIMITED - Enterprise Solutions Division.
         'static/description/Screen 7.png',
         'static/description/Screen 8.png',
     ],
-    'installable': True,
-    'application': True,
-    'license': 'LGPL-3',
+    'installable':
+        True,
+    'application':
+        True,
+    'license':
+        'LGPL-3',
     'assets': {
         'web.assets_backend': [
             'odoo_shopify_automation/static/src/css/dashboard.css',
@@ -142,10 +144,14 @@ Developed by ECOSIRE (PRIVATE) LIMITED - Enterprise Solutions Division.
             'https://cdn.jsdelivr.net/npm/apexcharts@3.45.0/dist/apexcharts.css',
         ],
     },
-    'support': 'https://www.ecosire.com/support',
-    'maintainer': 'ECOSIRE (PRIVATE) LIMITED',
-    'price': 0.0,
-    'currency': 'EUR',
+    'support':
+        'https://www.ecosire.com/support',
+    'maintainer':
+        'ECOSIRE (PRIVATE) LIMITED',
+    'price':
+        0.0,
+    'currency':
+        'EUR',
     'external_dependencies': {
         'python': [
             'ShopifyAPI',
@@ -155,6 +161,8 @@ Developed by ECOSIRE (PRIVATE) LIMITED - Enterprise Solutions Division.
             'numpy',
         ],
     },
-    'post_init_hook': 'post_init_hook',
-    'uninstall_hook': 'uninstall_hook',
-} 
+    'post_init_hook':
+        'post_init_hook',
+    'uninstall_hook':
+        'uninstall_hook',
+}

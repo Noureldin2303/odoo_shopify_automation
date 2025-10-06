@@ -111,4 +111,4 @@
               parent="menu_shopify_tools"
               action="action_shopify_manual_sync_wizard"
               sequence="1"/>
-</odoo> 
+</odoo>

@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 import logging
-import json
-import requests
 from datetime import datetime, timedelta
+import requests
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError, ValidationError
-from odoo.tools import float_compare
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -121,9 +118,9 @@ class ShopifyPayout(models.Model):
                 record._import_payout_from_shopify()
                 record.state = 'imported'
                 record.message_post(body=_('Payout imported successfully from Shopify'))
-            except Exception as e:
-                record.message_post(body=_('Failed to import payout: %s') % str(e))
-                raise UserError(_('Failed to import payout: %s') % str(e))
+            except Exception as err:
+                record.message_post(body=_('Failed to import payout: %s') % str(err))
+                raise UserError(_('Failed to import payout: %s') % str(err))
 
     def action_create_bank_statement(self):
         """Create bank statement for payout"""
@@ -131,9 +128,9 @@ class ShopifyPayout(models.Model):
             try:
                 record._create_bank_statement()
                 record.message_post(body=_('Bank statement created successfully'))
-            except Exception as e:
-                record.message_post(body=_('Failed to create bank statement: %s') % str(e))
-                raise UserError(_('Failed to create bank statement: %s') % str(e))
+            except Exception as err:
+                record.message_post(body=_('Failed to create bank statement: %s') % str(err))
+                raise UserError(_('Failed to create bank statement: %s') % str(err))
 
     def action_reconcile_transactions(self):
         """Reconcile payout transactions"""
@@ -141,9 +138,9 @@ class ShopifyPayout(models.Model):
             try:
                 record._reconcile_transactions()
                 record.message_post(body=_('Transactions reconciled successfully'))
-            except Exception as e:
-                record.message_post(body=_('Failed to reconcile transactions: %s') % str(e))
-                raise UserError(_('Failed to reconcile transactions: %s') % str(e))
+            except Exception as err:
+                record.message_post(body=_('Failed to reconcile transactions: %s') % str(err))
+                raise UserError(_('Failed to reconcile transactions: %s') % str(err))
 
     def action_validate_payout(self):
         """Validate payout and mark as completed"""

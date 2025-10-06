@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+  <!-- Product form view to add Shopify sync functionality -->
+  <record id="product_product_form_shopify" model="ir.ui.view">
+    <field name="name">product.product.shopify.form</field>
+    <field name="model">product.product</field>
+    <field name="inherit_id" ref="product.product_normal_form_view" />
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='active']" position="after">
+        <field name="shopify_sync_enabled" />
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Product tree view to show Shopify sync status -->
+  <record id="product_product_tree_shopify" model="ir.ui.view">
+    <field name="name">product.product.shopify.tree</field>
+    <field name="model">product.product</field>
+    <field name="inherit_id" ref="product.product_product_tree_view" />
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='active']" position="after">
+        <field name="shopify_sync_enabled" widget="boolean_toggle" />
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Add Shopify actions to product action menu -->
+  <record id="action_product_enable_shopify_sync" model="ir.actions.server">
+    <field name="name">Enable Shopify Sync</field>
+    <field name="model_id" ref="product.model_product_product" />
+    <field name="binding_model_id" ref="product.model_product_product" />
+    <field name="state">code</field>
+    <field name="code">action = records.action_enable_shopify_sync()</field>
+  </record>
+
+  <record id="action_product_disable_shopify_sync" model="ir.actions.server">
+    <field name="name">Disable Shopify Sync</field>
+    <field name="model_id" ref="product.model_product_product" />
+    <field name="binding_model_id" ref="product.model_product_product" />
+    <field name="state">code</field>
+    <field name="code">action = records.action_disable_shopify_sync()</field>
+  </record>
+
+  <record id="action_product_sync_to_shopify" model="ir.actions.server">
+    <field name="name">Sync to Shopify Now</field>
+    <field name="model_id" ref="product.model_product_product" />
+    <field name="binding_model_id" ref="product.model_product_product" />
+    <field name="state">code</field>
+    <field name="code">action = records.action_sync_to_shopify()</field>
+  </record>
+</odoo>
