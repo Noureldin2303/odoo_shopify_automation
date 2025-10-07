@@ -7,12 +7,12 @@
               sequence="10"/>
 
     <!-- Dashboard Menu -->
-    <menuitem id="menu_shopify_dashboard"
+    <!-- <menuitem id="menu_shopify_dashboard"
               name="Automation Dashboard"
               parent="menu_shopify_root"
               action="action_shopify_modern_dashboard"
               sequence="0"
-              groups="base.group_user"/>
+              groups="base.group_user"/> -->
 
     <!-- Configuration Menu -->
     <menuitem id="menu_shopify_config"
@@ -70,17 +70,17 @@
               sequence="40"/>
 
     <!-- Analytics Menu -->
-    <menuitem id="menu_shopify_analytics"
+    <!-- <menuitem id="menu_shopify_analytics"
               name="Analytics"
               parent="menu_shopify_root"
-              sequence="60"/>
+              sequence="60"/> -->
 
-    <menuitem id="menu_shopify_analytics_dashboard"
+    <!-- <menuitem id="menu_shopify_analytics_dashboard"
               name="Advanced Analytics"
               parent="menu_shopify_analytics"
               action="action_shopify_analytics_dashboard"
               sequence="1"
-              groups="base.group_user"/>
+              groups="base.group_user"/> -->
 
     <!-- Operations Menu -->
     <menuitem id="menu_shopify_operations"

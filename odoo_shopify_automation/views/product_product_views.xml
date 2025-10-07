@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
   <!-- Product form view to add Shopify sync functionality -->
-  <record id="product_product_form_shopify" model="ir.ui.view">
+  <!-- <record id="product_product_form_shopify" model="ir.ui.view">
     <field name="name">product.product.shopify.form</field>
     <field name="model">product.product</field>
     <field name="inherit_id" ref="product.product_normal_form_view" />
@@ -10,10 +10,10 @@
         <field name="shopify_sync_enabled" />
       </xpath>
     </field>
-  </record>
+  </record> -->
 
   <!-- Product tree view to show Shopify sync status -->
-  <record id="product_product_tree_shopify" model="ir.ui.view">
+  <!-- <record id="product_product_tree_shopify" model="ir.ui.view">
     <field name="name">product.product.shopify.tree</field>
     <field name="model">product.product</field>
     <field name="inherit_id" ref="product.product_product_tree_view" />
@@ -22,7 +22,7 @@
         <field name="shopify_sync_enabled" widget="boolean_toggle" />
       </xpath>
     </field>
-  </record>
+  </record> -->
 
   <!-- Add Shopify actions to product action menu -->
   <record id="action_product_enable_shopify_sync" model="ir.actions.server">

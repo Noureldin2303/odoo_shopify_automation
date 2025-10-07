@@ -116,7 +116,7 @@ class ShopifyProduct(models.Model):
                   'name': shopify_product.get('title', 'Unknown Product'),
                   'default_code': shopify_product.get('sku', ''),
                   'list_price': float(shopify_product.get('variants', [{}])[0].get('price', 0)),
-                  'type': 'product',
+                  'type': 'consu',
                   'categ_id': self.env.ref('product.product_category_all').id,
                   'description': shopify_product.get('body_html', ''),
               }
@@ -151,30 +151,37 @@ class ShopifyProduct(models.Model):
             else:
               self.create(mapping_vals)
 
-            # Handle variants if any
+            # Handle variants only if there are multiple meaningful variants
             variants = shopify_product.get('variants', [])
-            for variant in variants:
-              variant_mapping = self.search([('shopify_variant_id', '=', str(variant['id'])),
-                                             ('instance_id', '=', instance.id)])
+            # Only create variant mappings if there are multiple variants or the variant has meaningful info
+            if len(variants) > 1:
+              for variant in variants:
+                # Skip default variants that don't add value
+                variant_title = variant.get('title', 'Default Title')
+                if variant_title in ['Default Title', 'Default']:
+                  continue
+                
+                variant_mapping = self.search([('shopify_variant_id', '=', str(variant['id'])),
+                                               ('instance_id', '=', instance.id)])
 
-              if not variant_mapping:
-                # Create variant mapping (using same Odoo product for now)
-                self.create({
-                    'name':
-                        f"{shopify_product.get('title', 'Unknown Product')} - {variant.get('title', 'Default')}",
-                    'shopify_product_id':
-                        str(shopify_product['id']),
-                    'shopify_variant_id':
-                        str(variant['id']),
-                    'odoo_product_id':
-                        odoo_product.id,
-                    'instance_id':
-                        instance.id,
-                    'sync_status':
-                        'synced',
-                    'last_sync':
-                        fields.Datetime.now(),
-                })
+                if not variant_mapping:
+                  # Create variant mapping for meaningful variants
+                  self.create({
+                      'name':
+                          f"{shopify_product.get('title', 'Unknown Product')} - {variant_title}",
+                      'shopify_product_id':
+                          str(shopify_product['id']),
+                      'shopify_variant_id':
+                          str(variant['id']),
+                      'odoo_product_id':
+                          odoo_product.id,
+                      'instance_id':
+                          instance.id,
+                      'sync_status':
+                          'synced',
+                      'last_sync':
+                          fields.Datetime.now(),
+                  })
 
           except Exception as e:
             error_count += 1
