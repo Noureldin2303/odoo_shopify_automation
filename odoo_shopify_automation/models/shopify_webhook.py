@@ -586,10 +586,10 @@ class ShopifyWebhook(models.Model):
         # Log generic webhook for debugging
         _logger.info('Generic webhook received: %s', payload)
 
-    @api.model
-    def create(self, vals):
+    @api.model_create_multi
+    def create(self, vals_list):
         """Override create to auto-create webhook in Shopify if needed"""
-        webhook = super().create(vals)
+        webhook = super().create(vals_list)
         if webhook.auto_process and webhook.state == 'draft':
             webhook.action_create_webhook()
         return webhook

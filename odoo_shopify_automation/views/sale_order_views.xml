@@ -9,20 +9,16 @@
       <xpath expr="//field[@name='client_order_ref']" position="after">
         <field name="shopify_sync_enabled" />
         <field name="shopify_order_source" />
-        <field
-          name="shopify_export_status"
-          invisible="['shopify_order_source', '=', 'shopify']"
-        />
-        <field
-          name="shopify_last_sync"
-          invisible="not shopify_last_sync"
-        />
+        <field name="shopify_export_status" />
+        <field name="shopify_last_sync" />
+        <field name="shopify_payment_status" readonly="1" />
+        <field name="shopify_payment_method" readonly="1" />
+        <field name="shopify_fulfillment_status" readonly="1" />
+        <field name="shopify_delivery_category" readonly="1" />
+        <field name="shopify_delivery_method" readonly="1" />
       </xpath>
       <xpath expr="//field[@name='note']" position="after">
-        <field
-          name="shopify_sync_error"
-          invisible="not shopify_sync_error"
-        />
+        <field name="shopify_sync_error" invisible="not shopify_sync_error" />
       </xpath>
     </field>
   </record>
@@ -36,10 +32,12 @@
       <xpath expr="//field[@name='state']" position="after">
         <field name="shopify_sync_enabled" widget="boolean_toggle" />
         <field name="shopify_order_source" />
-        <field
-          name="shopify_export_status"
-          invisible="['shopify_order_source', '=', 'shopify']"
-        />
+        <field name="shopify_export_status" />
+        <field name="shopify_payment_status" />
+        <field name="shopify_payment_method" />
+        <field name="shopify_fulfillment_status" />
+        <field name="shopify_delivery_category" />
+        <field name="shopify_delivery_method" />
       </xpath>
     </field>
   </record>
@@ -76,5 +74,4 @@
     <field name="state">code</field>
     <field name="code">action = records.action_import_from_shopify()</field>
   </record>
-
 </odoo>

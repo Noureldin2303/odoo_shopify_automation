@@ -467,13 +467,14 @@ class ShopifyCarrier(models.Model):
         
         return country in self.supported_countries
 
-    @api.model
-    def create(self, vals):
+    @api.model_create_multi
+    def create(self, vals_list):
         """Override create to set default values"""
-        if not vals.get('code'):
-            vals['code'] = vals.get('name', '').upper().replace(' ', '_')
+        for vals in vals_list:
+            if not vals.get('code'):
+                vals['code'] = vals.get('name', '').upper().replace(' ', '_')
         
-        return super().create(vals)
+        return super().create(vals_list)
 
     def write(self, vals):
         """Override write to update related records"""

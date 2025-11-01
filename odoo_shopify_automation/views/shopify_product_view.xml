@@ -9,6 +9,12 @@
                 <field name="name"/>
                 <field name="shopify_product_id"/>
                 <field name="shopify_variant_id"/>
+                <field name="sku"/>
+                <field name="stock_quantity"/>
+                <field name="warehouse_location"/>
+                <field name="product_color"/>
+                <field name="shopify_inventory_item_id"/>
+                <field name="shopify_location_id"/>
                 <field name="odoo_product_id"/>
                 <field name="instance_id"/>
                 <field name="sync_status"/>
@@ -33,6 +39,12 @@
                         <group string="Shopify Information">
                             <field name="shopify_product_id"/>
                             <field name="shopify_variant_id"/>
+                            <field name="sku"/>
+                            <field name="stock_quantity"/>
+                            <field name="warehouse_location"/>
+                            <field name="product_color"/>
+                            <field name="shopify_inventory_item_id"/>
+                            <field name="shopify_location_id"/>
                             <field name="instance_id"/>
                             <field name="sync_status"/>
                         </group>

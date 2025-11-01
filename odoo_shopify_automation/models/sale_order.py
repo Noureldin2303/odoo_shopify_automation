@@ -34,6 +34,32 @@ class SaleOrder(models.Model):
 
   shopify_last_sync = fields.Datetime('Last Shopify Sync')
   shopify_sync_error = fields.Text('Sync Error Message')
+  shopify_payment_status = fields.Selection([
+      ('pending', 'Pending'),
+      ('authorized', 'Authorized'),
+      ('partially_paid', 'Partially Paid'),
+      ('paid', 'Paid'),
+      ('partially_refunded', 'Partially Refunded'),
+      ('refunded', 'Refunded'),
+      ('voided', 'Voided'),
+  ],
+                                            string='Shopify Payment Status')
+  shopify_payment_method = fields.Char('Shopify Payment Method')
+  shopify_fulfillment_status = fields.Selection([
+      ('unfulfilled', 'Unfulfilled'),
+      ('partial', 'Partially Fulfilled'),
+      ('fulfilled', 'Fulfilled'),
+      ('restocked', 'Restocked'),
+  ],
+                                                string='Shopify Fulfillment Status')
+  shopify_delivery_category = fields.Selection([
+      ('shipping', 'Shipping'),
+      ('pickup', 'Store Pickup'),
+      ('local_delivery', 'Local Delivery'),
+      ('none', 'Not Required'),
+  ],
+                                               string='Shopify Delivery Type')
+  shopify_delivery_method = fields.Char('Shopify Delivery Method')
 
   @api.model_create_multi
   def create(self, vals_list):
@@ -144,6 +170,19 @@ class SaleOrder(models.Model):
             'sticky': False,
         },
     }
+
+  def _set_shopify_status_values(self, status_vals):
+    """Utility to update Shopify status helper fields safely."""
+    allowed_keys = {
+        'shopify_payment_status',
+        'shopify_payment_method',
+        'shopify_fulfillment_status',
+        'shopify_delivery_category',
+        'shopify_delivery_method',
+    }
+    filtered_vals = {k: v for k, v in status_vals.items() if k in allowed_keys}
+    if filtered_vals:
+      self.write(filtered_vals)
 
   def action_export_to_shopify(self):
     """Action to manually export orders to Shopify"""

@@ -100,13 +100,14 @@ class ShopifyRisk(models.Model):
     
     note = fields.Text('Notes')
 
-    @api.model
-    def create(self, vals):
+    @api.model_create_multi
+    def create(self, vals_list):
         """Override create to auto-assess risk if enabled"""
-        risk = super().create(vals)
-        if risk.auto_assess:
+        risks = super().create(vals_list)
+        for risk in risks:
+          if risk.auto_assess:
             risk.action_assess_risk()
-        return risk
+        return risks
 
     def action_assess_risk(self):
         """Assess risk using AI and rule-based analysis"""
@@ -565,10 +566,11 @@ class ShopifyRisk(models.Model):
             'false_positives': len(self.filtered(lambda r: r.state == 'false_positive')),
         }
 
-    @api.model
-    def create(self, vals):
-        """Override create to set default values"""
-        if not vals.get('name'):
-            vals['name'] = f'Risk Assessment {fields.Datetime.now().strftime("%Y-%m-%d %H:%M")}'
+    # @api.model_create_multi
+    # def create(self, vals_list):
+    #     """Override create to set default values"""
+    #     for vals in vals_list:
+    #       if not vals.get('name'):
+    #         vals['name'] = f'Risk Assessment {fields.Datetime.now().strftime("%Y-%m-%d %H:%M")}'
         
-        return super().create(vals) 
+    #     return super().create(vals_list) 

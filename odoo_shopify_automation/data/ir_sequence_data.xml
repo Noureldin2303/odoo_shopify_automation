@@ -309,17 +309,6 @@
             <field name="company_id" eval="False"/>
         </record>
 
-        <!-- Shopify Notification Sequence -->
-        <record id="seq_shopify_notification" model="ir.sequence">
-            <field name="name">Shopify Notification</field>
-            <field name="code">shopify.notification</field>
-            <field name="prefix">SNOT</field>
-            <field name="padding">6</field>
-            <field name="number_increment">1</field>
-            <field name="number_next_actual">1</field>
-            <field name="company_id" eval="False"/>
-        </record>
-
         <!-- Shopify API Call Sequence -->
         <record id="seq_shopify_api_call" model="ir.sequence">
             <field name="name">Shopify API Call</field>

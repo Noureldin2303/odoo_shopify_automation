@@ -2,7 +2,7 @@
 <odoo>
     <!-- Main Menu -->
     <menuitem id="menu_shopify_root"
-              name="Shopify PRO"
+              name="Shopify"
               web_icon="odoo_shopify_automation,static/description/icon.png"
               sequence="10"/>
 

@@ -609,15 +609,16 @@ class ShopifyAnalytics(models.Model):
             # Return report data (could be used for PDF generation, Excel export, etc.)
             return report_data
 
-    @api.model
-    def create(self, vals):
+    @api.model_create_multi
+    def create(self, vals_list):
         """Override create to set default values"""
-        if not vals.get('date_from'):
-            vals['date_from'] = (datetime.now() - timedelta(days=30)).date()
-        if not vals.get('date_to'):
-            vals['date_to'] = datetime.now().date()
+        for vals in vals_list:
+            if not vals.get('date_from'):
+                vals['date_from'] = (datetime.now() - timedelta(days=30)).date()
+            if not vals.get('date_to'):
+                vals['date_to'] = datetime.now().date()
         
-        return super().create(vals)
+        return super().create(vals_list)
 
     def write(self, vals):
         """Override write to trigger analytics generation"""

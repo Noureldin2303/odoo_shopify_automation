@@ -57,4 +57,4 @@ class ShopifyWebhookController(http.Controller):
             'message': str(post),
         })
         # (Scaffold) Add logic to process and map customer data
-        return {'status': 'ok'} 
+        return {'status': 'ok'}

@@ -1,1 +1,1 @@
-# Odoo Shopify Automation
+# Odoo Shopify Integration
