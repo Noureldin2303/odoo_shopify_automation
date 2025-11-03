@@ -8,6 +8,7 @@
     <field name="arch" type="xml">
       <xpath expr="//field[@name='active']" position="after">
         <field name="shopify_sync_enabled" />
+        <field name="shopify_external_id" readonly="1" invisible="shopify_external_id == False" />
       </xpath>
     </field>
   </record>

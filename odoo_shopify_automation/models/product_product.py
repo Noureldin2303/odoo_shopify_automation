@@ -11,6 +11,10 @@ class ProductProduct(models.Model):
       'Enable Shopify Sync',
       default=False,
       help='If enabled, this product will be automatically synced to all active Shopify instances')
+  shopify_external_id = fields.Char('Shopify Variant ID',
+                                    help='External Shopify Variant ID for synchronization',
+                                    index=True,
+                                    copy=False)
 
   @api.model_create_multi
   def create(self, vals_list):

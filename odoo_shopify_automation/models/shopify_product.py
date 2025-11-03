@@ -165,13 +165,19 @@ class ShopifyProduct(models.Model):
               ('shopify_product_id', '=', product_id_str), ('instance_id', '=', instance.id)
           ])
 
-          odoo_template = existing_mappings[:
-                                            1].odoo_product_id.product_tmpl_id if existing_mappings else False
+          # First, check if a product template exists with this Shopify ID
+          odoo_template = ProductTemplate.search([('shopify_external_id', '=', product_id_str)],
+                                                 limit=1)
+
+          # If not found by external ID, check existing mappings
+          if not odoo_template and existing_mappings:
+            odoo_template = existing_mappings[:1].odoo_product_id.product_tmpl_id
 
           if odoo_template:
             template_update_vals = {
                 'name': shopify_product.get('title', 'Unknown Product'),
                 'description': shopify_product.get('body_html', '') or '',
+                'shopify_external_id': product_id_str,  # Update external ID
             }
             if image_data:
               template_update_vals['image_1920'] = image_data
@@ -197,6 +203,8 @@ class ShopifyProduct(models.Model):
                 'list_price': min_price,  # Set to minimum variant price
                 'taxes_id': [(5, 0, 0)],
                 'supplier_taxes_id': [(5, 0, 0)],
+                'is_storable': True,
+                'shopify_external_id': product_id_str,  # Store Shopify product ID
             }
             if image_data:
               template_vals['image_1920'] = image_data
@@ -669,15 +677,28 @@ class ShopifyProduct(models.Model):
   def _match_or_create_variant(self, template, shopify_variant, meaningful_options, attribute_info,
                                ptav_map):
     """Find or create the matching Odoo variant for a Shopify variant."""
+    variant_id_str = str(shopify_variant.get('id'))
+
+    # First, check if variant exists by Shopify external ID
+    existing_variant = self.env['product.product'].search(
+        [('shopify_external_id', '=', variant_id_str), ('product_tmpl_id', '=', template.id)],
+        limit=1)
+
+    if existing_variant:
+      return existing_variant, False
+
     if not meaningful_options:
       variant = template.product_variant_ids[:1]
       if variant:
+        # Update the external ID if it wasn't set
+        if not variant.shopify_external_id:
+          variant.write({'shopify_external_id': variant_id_str})
         return variant, False
       variant = self.env['product.product'].create({
           'product_tmpl_id': template.id,
-          'qty_available': shopify_variant.get('inventory_quantity', 0),
           'default_code': shopify_variant.get('sku', ''),
           'barcode': shopify_variant.get('barcode', ''),
+          'shopify_external_id': variant_id_str,
       })
       return variant, True
 
@@ -698,6 +719,9 @@ class ShopifyProduct(models.Model):
       candidate_value_ids = candidate.product_template_attribute_value_ids.mapped(
           'product_attribute_value_id').ids
       if set(candidate_value_ids) == set(desired_value_ids):
+        # Update the external ID if it wasn't set
+        if not candidate.shopify_external_id:
+          candidate.write({'shopify_external_id': variant_id_str})
         return candidate, False
 
     # Create new variant for the combination
@@ -717,6 +741,7 @@ class ShopifyProduct(models.Model):
 
     variant_vals = {
         'product_tmpl_id': template.id,
+        'shopify_external_id': variant_id_str,  # Store Shopify variant ID
     }
     if ptav_ids:
       variant_vals['product_template_attribute_value_ids'] = [(6, 0, ptav_ids)]
@@ -726,8 +751,10 @@ class ShopifyProduct(models.Model):
 
   def _update_variant_from_shopify(self, variant, shopify_variant):
     """Write Shopify variant details onto the Odoo variant directly from Shopify data."""
+    variant_id_str = str(shopify_variant.get('id'))
     sku = (shopify_variant.get('sku') or '').strip()
     barcode = (shopify_variant.get('barcode') or '').strip()
+    available_quantity = shopify_variant.get('inventory_quantity', 0)
 
     try:
       variant_price = float(shopify_variant.get('price', 0) or 0.0)
@@ -742,6 +769,7 @@ class ShopifyProduct(models.Model):
         'barcode': barcode or False,
         'taxes_id': [(5, 0, 0)],
         'supplier_taxes_id': [(5, 0, 0)],
+        'shopify_external_id': variant_id_str,  # Always update external ID
     }
 
     weight_value = shopify_variant.get('weight')
@@ -752,6 +780,18 @@ class ShopifyProduct(models.Model):
         update_vals['weight'] = 0.0
 
     variant.write(update_vals)
+
+    if available_quantity is not None:
+      stock_location = self._get_default_stock_location()
+      # Get current stock quantity
+      stock_quant = self.env['stock.quant'].search([('product_id', '=', variant.id),
+                                                    ('location_id', '=', stock_location.id)],
+                                                   limit=1)
+      current_qty = stock_quant.quantity if stock_quant else 0.0
+      # Calculate the difference to update
+      qty_difference = available_quantity - current_qty
+      if qty_difference != 0:
+        self.env['stock.quant']._update_available_quantity(variant, stock_location, qty_difference)
 
     if variant.product_template_attribute_value_ids and required_price_extra != 0:
       first_ptav = variant.product_template_attribute_value_ids[0]

@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
   <!-- Product form view to add Shopify sync functionality -->
-  <!-- <record id="product_product_form_shopify" model="ir.ui.view">
+  <record id="product_product_form_shopify" model="ir.ui.view">
     <field name="name">product.product.shopify.form</field>
     <field name="model">product.product</field>
     <field name="inherit_id" ref="product.product_normal_form_view" />
     <field name="arch" type="xml">
       <xpath expr="//field[@name='active']" position="after">
         <field name="shopify_sync_enabled" />
+        <field name="shopify_external_id" readonly="1" invisible="shopify_external_id == False" />
       </xpath>
     </field>
-  </record> -->
+  </record>
 
   <!-- Product tree view to show Shopify sync status -->
   <!-- <record id="product_product_tree_shopify" model="ir.ui.view">
