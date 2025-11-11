@@ -500,7 +500,7 @@ class ShopifyOrder(models.Model):
         'instance_id': instance.id,
         'status': 'in_progress',
     })
-    self.env['shopify.log'].create({
+    self.env['shopify.log'].sudo().create({
         'name': 'Order Import Started',
         'log_type': 'info',
         'job_id': job.id,
@@ -659,7 +659,7 @@ class ShopifyOrder(models.Model):
               # Try to find product by Shopify product ID if it exists
               if product_id:
                 product_mapping = self.env['shopify.product'].search(
-                    [('shopify_product_id', '=', str(product_id)),
+                    [('shopify_product_id', '=', str(product_id)), ('active', '=', True),
                      ('instance_id', '=', instance.id)],
                     limit=1)
                 if product_mapping:
@@ -723,15 +723,7 @@ class ShopifyOrder(models.Model):
 
             total_tax_amount = float(shopify_order.get('total_tax', 0) or 0)
             if total_tax_amount:
-              tax_product = self._get_tax_product()
-              self.env['sale.order.line'].create({
-                  'order_id': odoo_order.id,
-                  'product_id': tax_product.id,
-                  'name': 'Shopify Taxes',
-                  'product_uom_qty': 1,
-                  'price_unit': total_tax_amount,
-                  'tax_id': [(5, 0, 0)],
-              })
+              pass
 
             total_discount_amount = float(shopify_order.get('total_discounts', 0) or 0)
             if total_discount_amount:
@@ -844,7 +836,7 @@ class ShopifyOrder(models.Model):
 
       # Update job status
       job.write({'status': 'done'})
-      self.env['shopify.log'].create({
+      self.env['shopify.log'].sudo().create({
           'name':
               'Order Import Completed',
           'log_type':
@@ -858,7 +850,7 @@ class ShopifyOrder(models.Model):
       return all_orders
     except Exception as e:
       job.write({'status': 'failed', 'error_message': str(e)})
-      self.env['shopify.log'].create({
+      self.env['shopify.log'].sudo().create({
           'name': 'Order Import Exception',
           'log_type': 'error',
           'job_id': job.id,
@@ -881,7 +873,7 @@ class ShopifyOrder(models.Model):
         'status': 'in_progress',
     })
 
-    self.env['shopify.log'].create({
+    self.env['shopify.log'].sudo().create({
         'name': 'Order Export Started',
         'log_type': 'info',
         'job_id': job.id,
@@ -906,7 +898,7 @@ class ShopifyOrder(models.Model):
 
       except Exception as e:
         error_count += 1
-        self.env['shopify.log'].create({
+        self.env['shopify.log'].sudo().create({
             'name': 'Order Export Error',
             'log_type': 'error',
             'job_id': job.id,
@@ -917,7 +909,7 @@ class ShopifyOrder(models.Model):
     status = 'done' if error_count == 0 else 'failed'
     job.write({'status': status})
 
-    self.env['shopify.log'].create({
+    self.env['shopify.log'].sudo().create({
         'name': 'Order Export Completed',
         'log_type': 'info',
         'job_id': job.id,
