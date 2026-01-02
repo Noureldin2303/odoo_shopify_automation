@@ -113,7 +113,7 @@ class ShopifyOrder(models.Model):
 
     try:
       while True:
-        params = {'limit': 250, 'status': 'any'}
+        params = {'limit': 1, 'status': 'any'}
         if last_id:
           params['since_id'] = last_id
 
@@ -234,6 +234,17 @@ class ShopifyOrder(models.Model):
               #   order_vals['currency_id'] = currency.id
               odoo_order = self.env['sale.order'].create(order_vals)
               created_count += 1
+
+              # Send notification to POS about new Shopify order
+              if config_id:
+                notification_data = {
+                    'order_id': odoo_order.id,
+                    'order_name': odoo_order.name,
+                    'partner_name': customer.name if customer else 'Unknown',
+                    'shopify_order_id': shopify_order['id'],
+                    'amount_total': shopify_order.get('total_price', 0),
+                }
+                config_id._notify_shopify_orders('SHOPIFY_ORDER_CREATE', notification_data)
 
             if odoo_order.shopify_order_source == 'shopify' and odoo_order.order_line:
               odoo_order.order_line.unlink()

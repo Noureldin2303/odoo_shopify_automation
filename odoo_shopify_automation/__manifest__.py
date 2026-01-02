@@ -45,6 +45,7 @@
     'assets': {
         'point_of_sale._assets_pos': [
             'odoo_shopify_automation/static/src/overrides/control_buttons.js',
+            'odoo_shopify_automation/static/src/overrides/shopify_notifications.js',
         ],
     },
     'external_dependencies': {
