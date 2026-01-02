@@ -9,14 +9,6 @@
           <field name="instance_id" />
           <field name="sync_type" />
         </group>
-        <group invisible="sync_type != 'export_product_selective'">
-          <field name="export_all_products" />
-          <field
-            name="product_ids"
-            widget="many2many_tags"
-            invisible="export_all_products"
-            />
-        </group>
         <footer>
           <button name="action_manual_sync" type="object" string="Sync Now" class="btn-primary" />
           <button string="Cancel" class="btn-secondary" special="cancel" />

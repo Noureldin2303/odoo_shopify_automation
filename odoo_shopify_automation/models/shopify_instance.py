@@ -85,10 +85,7 @@ class ShopifyInstance(models.Model):
                                                                 ('active', '=', True)])
       rec.customer_count = self.env['shopify.customer'].search_count([('instance_id', '=', rec.id),
                                                                       ('active', '=', True)])
-      rec.queue_job_count = self.env['shopify.queue.job'].search_count([('instance_id', '=', rec.id)
-                                                                       ])
-      rec.error_count = self.env['shopify.log'].search_count([('job_id.instance_id', '=', rec.id),
-                                                              ('log_type', '=', 'error')])
+
 
       # Calculate total sales
       orders = self.env['shopify.order'].search([('instance_id', '=', rec.id),
@@ -116,11 +113,6 @@ class ShopifyInstance(models.Model):
   def _cron_sync_products(self):
     """Cron method for syncing products (import from Shopify)"""
     self.env['shopify.product']._run_product_import_cron()
-
-  @api.model
-  def _cron_export_products(self):
-    """Cron method for exporting products to Shopify"""
-    self.env['shopify.product']._run_product_export_cron()
 
   @api.model
   def _cron_sync_orders(self):

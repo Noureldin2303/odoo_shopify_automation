@@ -45,28 +45,6 @@
             <field name="company_id" eval="False"/>
         </record>
 
-        <!-- Shopify Queue Job Sequence -->
-        <record id="seq_shopify_queue_job" model="ir.sequence">
-            <field name="name">Shopify Queue Job</field>
-            <field name="code">shopify.queue.job</field>
-            <field name="prefix">SQJ</field>
-            <field name="padding">8</field>
-            <field name="number_increment">1</field>
-            <field name="number_next_actual">1</field>
-            <field name="company_id" eval="False"/>
-        </record>
-
-        <!-- Shopify Log Sequence -->
-        <record id="seq_shopify_log" model="ir.sequence">
-            <field name="name">Shopify Log</field>
-            <field name="code">shopify.log</field>
-            <field name="prefix">SLOG</field>
-            <field name="padding">8</field>
-            <field name="number_increment">1</field>
-            <field name="number_next_actual">1</field>
-            <field name="company_id" eval="False"/>
-        </record>
-
         <!-- Shopify Webhook Sequence -->
         <record id="seq_shopify_webhook" model="ir.sequence">
             <field name="name">Shopify Webhook</field>
@@ -78,55 +56,11 @@
             <field name="company_id" eval="False"/>
         </record>
 
-        <!-- Shopify Payout Sequence -->
-        <record id="seq_shopify_payout" model="ir.sequence">
-            <field name="name">Shopify Payout</field>
-            <field name="code">shopify.payout</field>
-            <field name="prefix">SPAY</field>
-            <field name="padding">6</field>
-            <field name="number_increment">1</field>
-            <field name="number_next_actual">1</field>
-            <field name="company_id" eval="False"/>
-        </record>
-
-        <!-- Shopify Payout Transaction Sequence -->
-        <record id="seq_shopify_payout_transaction" model="ir.sequence">
-            <field name="name">Shopify Payout Transaction</field>
-            <field name="code">shopify.payout.transaction</field>
-            <field name="prefix">SPT</field>
-            <field name="padding">8</field>
-            <field name="number_increment">1</field>
-            <field name="number_next_actual">1</field>
-            <field name="company_id" eval="False"/>
-        </record>
-
-        <!-- Shopify Carrier Sequence -->
-        <record id="seq_shopify_carrier" model="ir.sequence">
-            <field name="name">Shopify Carrier</field>
-            <field name="code">shopify.carrier</field>
-            <field name="prefix">SCAR</field>
-            <field name="padding">6</field>
-            <field name="number_increment">1</field>
-            <field name="number_next_actual">1</field>
-            <field name="company_id" eval="False"/>
-        </record>
-
         <!-- Shopify Location Sequence -->
         <record id="seq_shopify_location" model="ir.sequence">
             <field name="name">Shopify Location</field>
             <field name="code">shopify.location</field>
             <field name="prefix">SLOC</field>
-            <field name="padding">6</field>
-            <field name="number_increment">1</field>
-            <field name="number_next_actual">1</field>
-            <field name="company_id" eval="False"/>
-        </record>
-
-        <!-- Shopify Risk Sequence -->
-        <record id="seq_shopify_risk" model="ir.sequence">
-            <field name="name">Shopify Risk</field>
-            <field name="code">shopify.risk</field>
-            <field name="prefix">SRISK</field>
             <field name="padding">6</field>
             <field name="number_increment">1</field>
             <field name="number_next_actual">1</field>

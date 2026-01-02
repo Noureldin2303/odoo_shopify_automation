@@ -7,23 +7,11 @@
     <field name="inherit_id" ref="product.product_normal_form_view" />
     <field name="arch" type="xml">
       <xpath expr="//field[@name='active']" position="after">
-        <field name="shopify_sync_enabled" />
-        <field name="shopify_external_id" readonly="1" invisible="shopify_external_id == False" />
+        <field name="shopify_external_id" />
+        <field name="shopify_product_external_id" />
       </xpath>
     </field>
   </record>
-
-  <!-- Product tree view to show Shopify sync status -->
-  <!-- <record id="product_product_tree_shopify" model="ir.ui.view">
-    <field name="name">product.product.shopify.tree</field>
-    <field name="model">product.product</field>
-    <field name="inherit_id" ref="product.product_product_tree_view" />
-    <field name="arch" type="xml">
-      <xpath expr="//field[@name='active']" position="after">
-        <field name="shopify_sync_enabled" widget="boolean_toggle" />
-      </xpath>
-    </field>
-  </record> -->
 
   <!-- Add Shopify actions to product action menu -->
   <record id="action_product_enable_shopify_sync" model="ir.actions.server">

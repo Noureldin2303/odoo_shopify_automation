@@ -13,10 +13,23 @@ class ProductTemplate(models.Model):
       help=
       'If enabled, this product template will be automatically synced to all active Shopify instances'
   )
-  shopify_external_id = fields.Char('Shopify Product ID',
-                                    help='External Shopify Product ID for synchronization',
-                                    index=True,
-                                    copy=False)
+  shopify_external_id = fields.Char(
+      'Shopify Product ID',
+      help='External Shopify Product ID for synchronization',
+      index=True,
+      copy=False,
+      readonly=False,
+  )
+  shopify_product_mapping_id = fields.Many2one('shopify.product',
+                                               string='Shopify Product Mapping',
+                                               ondelete='set null')
+
+  shopify_product_id = fields.Char(string='Shopify Product ID',
+                                   related='shopify_product_mapping_id.shopify_product_id',
+                                   store=True,
+                                   index=True,
+                                   copy=False,
+                                   readonly=False)
 
   @api.model_create_multi
   def create(self, vals_list):
@@ -126,46 +139,6 @@ class ProductTemplate(models.Model):
             'title': 'Shopify Sync',
             'message': f'Shopify sync disabled for {len(self)} product template(s).',
             'type': 'info',
-            'sticky': False,
-        },
-    }
-
-  def action_sync_to_shopify(self):
-    """Action to manually sync product templates (all variants) to Shopify"""
-    active_instances = self.env['shopify.instance'].search([('active', '=', True),
-                                                            ('state', '=', 'connected')])
-
-    if not active_instances:
-      return {
-          'type': 'ir.actions.client',
-          'tag': 'display_notification',
-          'params': {
-              'title': 'Shopify Sync',
-              'message': 'No active Shopify instances found.',
-              'type': 'warning',
-              'sticky': False,
-          },
-      }
-
-    synced_count = 0
-    for template in self:
-      for product in template.product_variant_ids:
-        for instance in active_instances:
-          try:
-            self.env['shopify.product'].export_single_product_to_shopify(instance, product)
-            synced_count += 1
-          except Exception as e:
-            _logger.error(
-                f"Failed to sync product {product.name} (template: {template.name}) to {instance.name}: {str(e)}"
-            )
-
-    return {
-        'type': 'ir.actions.client',
-        'tag': 'display_notification',
-        'params': {
-            'title': 'Shopify Sync',
-            'message': f'Initiated sync for {synced_count} product variant-instance combinations.',
-            'type': 'success',
             'sticky': False,
         },
     }

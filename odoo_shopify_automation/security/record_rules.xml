@@ -18,65 +18,17 @@
         </record>
 
         <!-- Shopify Product Multi-Company Rule -->
-        <record id="rule_shopify_product_multi_company" model="ir.rule">
+        <!-- <record id="rule_shopify_product_multi_company" model="ir.rule">
             <field name="name">Shopify Product Multi-Company</field>
             <field name="model_id" ref="model_shopify_product"/>
             <field name="domain_force">[('instance_id.company_id', 'in', company_ids)]</field>
             <field name="groups" eval="[(4, ref('group_shopify_user'))]"/>
-        </record>
+        </record> -->
 
         <!-- Shopify Customer Multi-Company Rule -->
         <record id="rule_shopify_customer_multi_company" model="ir.rule">
             <field name="name">Shopify Customer Multi-Company</field>
             <field name="model_id" ref="model_shopify_customer"/>
-            <field name="domain_force">[('instance_id.company_id', 'in', company_ids)]</field>
-            <field name="groups" eval="[(4, ref('group_shopify_user'))]"/>
-        </record>
-
-        <!-- Shopify Queue Job Multi-Company Rule -->
-        <record id="rule_shopify_queue_job_multi_company" model="ir.rule">
-            <field name="name">Shopify Queue Job Multi-Company</field>
-            <field name="model_id" ref="model_shopify_queue_job"/>
-            <field name="domain_force">[('instance_id.company_id', 'in', company_ids)]</field>
-            <field name="groups" eval="[(4, ref('group_shopify_user'))]"/>
-        </record>
-
-        <!-- Shopify Log Multi-Company Rule -->
-        <record id="rule_shopify_log_multi_company" model="ir.rule">
-            <field name="name">Shopify Log Multi-Company</field>
-            <field name="model_id" ref="model_shopify_log"/>
-            <field name="domain_force">[('job_id.instance_id.company_id', 'in', company_ids)]</field>
-            <field name="groups" eval="[(4, ref('group_shopify_user'))]"/>
-        </record>
-
-        <!-- Shopify Webhook Multi-Company Rule -->
-        <record id="rule_shopify_webhook_multi_company" model="ir.rule">
-            <field name="name">Shopify Webhook Multi-Company</field>
-            <field name="model_id" ref="model_shopify_webhook"/>
-            <field name="domain_force">[('instance_id.company_id', 'in', company_ids)]</field>
-            <field name="groups" eval="[(4, ref('group_shopify_user'))]"/>
-        </record>
-
-        <!-- Shopify Payout Multi-Company Rule -->
-        <record id="rule_shopify_payout_multi_company" model="ir.rule">
-            <field name="name">Shopify Payout Multi-Company</field>
-            <field name="model_id" ref="model_shopify_payout"/>
-            <field name="domain_force">[('instance_id.company_id', 'in', company_ids)]</field>
-            <field name="groups" eval="[(4, ref('group_shopify_user'))]"/>
-        </record>
-
-        <!-- Shopify Carrier Multi-Company Rule -->
-        <record id="rule_shopify_carrier_multi_company" model="ir.rule">
-            <field name="name">Shopify Carrier Multi-Company</field>
-            <field name="model_id" ref="model_shopify_carrier"/>
-            <field name="domain_force">[('delivery_carrier_id.company_id', 'in', company_ids)]</field>
-            <field name="groups" eval="[(4, ref('group_shopify_user'))]"/>
-        </record>
-
-        <!-- Shopify Risk Multi-Company Rule -->
-        <record id="rule_shopify_risk_multi_company" model="ir.rule">
-            <field name="name">Shopify Risk Multi-Company</field>
-            <field name="model_id" ref="model_shopify_risk"/>
             <field name="domain_force">[('instance_id.company_id', 'in', company_ids)]</field>
             <field name="groups" eval="[(4, ref('group_shopify_user'))]"/>
         </record>

@@ -189,40 +189,19 @@
                   <i class="fa fa-shopping-cart" title="View Orders" />
                   <span>View Orders</span>
                 </button>
-                <button
+                <!-- <button
                   type="action"
                   name="%(odoo_shopify_automation.action_shopify_product)d"
                   class="o_action_card">
                   <i class="fa fa-cube" title="Manage Products" />
                   <span>Manage Products</span>
-                </button>
+                </button> -->
                 <button
                   type="action"
                   name="%(odoo_shopify_automation.action_shopify_customer)d"
                   class="o_action_card">
                   <i class="fa fa-users" title="Customer Database" />
                   <span>Customer Database</span>
-                </button>
-                <button
-                  type="action"
-                  name="%(odoo_shopify_automation.action_shopify_queue_job)d"
-                  class="o_action_card">
-                  <i class="fa fa-tasks" title="Queue Management" />
-                  <span>Queue Management</span>
-                </button>
-                <button
-                  type="action"
-                  name="%(odoo_shopify_automation.action_shopify_log)d"
-                  class="o_action_card">
-                  <i class="fa fa-file-text-o" title="System Logs" />
-                  <span>System Logs</span>
-                </button>
-                <button
-                  type="action"
-                  name="%(odoo_shopify_automation.action_shopify_cron)d"
-                  class="o_action_card">
-                  <i class="fa fa-clock-o" title="Schedule Jobs" />
-                  <span>Schedule Jobs</span>
                 </button>
                 <!-- Secondary actions: Manage Instances, Webhooks -->
                 <button
@@ -231,13 +210,6 @@
                   class="o_action_card o_action_secondary">
                   <i class="fa fa-cogs" title="Manage Instances" />
                   <span>Manage Instances</span>
-                </button>
-                <button
-                  type="action"
-                  name="%(odoo_shopify_automation.action_shopify_webhook)d"
-                  class="o_action_card o_action_secondary">
-                  <i class="fa fa-plug" title="Webhooks" />
-                  <span>Webhooks</span>
                 </button>
               </div>
             </div>
@@ -490,16 +462,6 @@
 
               <div class="o_insight_card">
                 <div class="o_insight_header">
-                  <i class="fa fa-exclamation-triangle" title="Risk Alerts" />
-                  <span>Risk Alerts</span>
-                </div>
-                <div class="o_insight_content">
-                  <field name="risk_alerts" widget="text" />
-                </div>
-              </div>
-
-              <div class="o_insight_card">
-                <div class="o_insight_header">
                   <i class="fa fa-cogs" title="Optimization" />
                   <span>Optimization Recommendations</span>
                 </div>
@@ -514,7 +476,6 @@
     </field>
   </record>
 
-  <!-- Analytics Dashboard Action -->
   <record id="action_shopify_analytics_dashboard" model="ir.actions.act_window">
     <field name="name">Advanced Analytics</field>
     <field name="res_model">shopify.analytics</field>

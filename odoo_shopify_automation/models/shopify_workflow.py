@@ -178,7 +178,7 @@ class ShopifyWorkflow(models.Model):
   def _test_workflow_execution(self):
     """Test workflow execution with sample data"""
     # Create sample order for testing
-    sample_order = self.env['sale.order'].create({
+    sample_order = self.env['pos.order'].create({
         'partner_id': self.env.ref('base.res_partner_1').id,
         'date_order': fields.Datetime.now(),
     })
@@ -245,11 +245,6 @@ class ShopifyWorkflow(models.Model):
 
         except Exception as err:
           _logger.error(f"Error processing workflow {workflow.name}: {str(err)}")
-          self.env['shopify.log'].create({
-              'name': 'Workflow Processing Error',
-              'log_type': 'error',
-              'message': f'Error processing workflow {workflow.name}: {str(err)}',
-          })
 
       _logger.info(f"Processed {processed_count} workflow items")
 
@@ -721,12 +716,7 @@ class ShopifyWorkflowAction(models.Model):
       self.activity_schedule('mail.mail_activity_data_todo',
                              note=self.parameters.get('note', 'Workflow action executed'),
                              user_id=self.parameters.get('user_id', self.env.user.id))
-    elif self.system_action == 'log_event':
-      self.env['shopify.log'].create({
-          'job_id': order.id,
-          'log_type': 'info',
-          'message': self.parameters.get('message', 'Workflow action executed'),
-      })
+
 
   def _execute_integration_action(self, order):
     """Execute integration action"""

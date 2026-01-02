@@ -1,6 +1,7 @@
 from odoo import models, fields, api
 import requests
 import logging
+import time
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools.translate import _
 
@@ -16,6 +17,8 @@ class ShopifyProduct(models.Model):
   shopify_product_id = fields.Char(
       'Shopify Product ID',
       required=True,
+      index=True,
+      copy=False,
   )
   shopify_variant_id = fields.Char('Shopify Variant ID')
   odoo_product_id = fields.Many2one(
@@ -80,506 +83,150 @@ class ShopifyProduct(models.Model):
   ]
 
   def import_products_from_shopify(self, instance):
-    """Import products from Shopify and keep variants in sync."""
     if not instance:
       raise UserError(_('No Shopify instance provided.'))
 
-    url = f"{instance.shop_url}/admin/api/2024-07/products.json"
-
+    # Prepare list of product batches (each batch is a list of product dicts).
+    product_batches = []
+    since_id = 6643732938904
     try:
-      if hasattr(instance, 'access_token') and instance.access_token:
-        headers = {
-            'X-Shopify-Access-Token': instance.access_token,
-            'Content-Type': 'application/json',
-        }
-        response = requests.get(url, headers=headers, timeout=20)
-      else:
-        response = requests.get(url, auth=(instance.api_key, instance.password), timeout=20)
+      next_url = f"{instance.shop_url}/admin/api/2025-10/products.json?limit=3&since_id={since_id or ''}"
 
-      if response.status_code != 200:
-        _logger.error(f"Product import failed with status {response.status_code}: {response.text}")
-        job = self.env['shopify.queue.job'].create({
-            'name': f'Import Products ({instance.name})',
-            'job_type': 'import_product',
-            'instance_id': instance.id,
-            'status': 'failed',
-            'error_message': f'HTTP {response.status_code}: {response.text}',
-        })
-        self.env['shopify.log'].create({
-            'name': 'Product Import Error',
-            'log_type': 'error',
-            'job_id': job.id,
-            'message': f'Failed to import products - HTTP {response.status_code}: {response.text}',
-        })
-        raise UserError(
-            _(f'Failed to import products - HTTP {response.status_code}: {response.text}'))
+      while next_url:
+        if hasattr(instance, 'access_token') and instance.access_token:
+          headers = {
+              'X-Shopify-Access-Token': instance.access_token,
+              'Content-Type': 'application/json'
+          }
+          response = requests.get(next_url, headers=headers, timeout=30)
+        else:
+          response = requests.get(next_url, auth=(instance.api_key, instance.password), timeout=30)
+        if response.status_code != 200:
+          _logger.error(
+              f"Product import failed with status {response.status_code}: {response.text}")
+          raise UserError(_(f'Failed to import products - HTTP {response.status_code}: {response.text}'))
 
-      response_data = response.json()
-      products = response_data.get('products', [])
+        data = response.json()
+        batch = data.get('products', []) or []
+        product_batches.append(batch)
 
-      job = self.env['shopify.queue.job'].create({
-          'name': f'Import Products ({instance.name})',
-          'job_type': 'import_product',
-          'instance_id': instance.id,
-          'status': 'in_progress',
-      })
-      self.env['shopify.log'].create({
-          'name':
-              'Product Import Started',
-          'log_type':
-              'info',
-          'job_id':
-              job.id,
-          'message':
-              f'Starting import of {len(products)} products from Shopify instance {instance.name}',
-      })
+        if not batch:
+          break
 
-      created_count = 0
-      updated_count = 0
-      error_count = 0
+        last_product = batch[-1]
+        since_id = last_product.get('id')
+        # if since_id:
+        #   next_url = f"{instance.shop_url}/admin/api/2025-10/products.json?limit=10&since_id={since_id}"
+        # else:
+        next_url = None
+        time.sleep(1)  # Sleep to avoid rate limits
 
-      ProductTemplate = self.env['product.template']
+    except Exception as e:
+      raise UserError(_(f'Exception during product import: {str(e)}'))
 
-      for shopify_product in products:
+    created_count = 0
+    updated_count = 0
+    error_count = 0
+
+    ProductTemplate = self.env['product.template']
+
+    # Iterate batches to process 100 products at a time
+    for batch in product_batches:
+      for shopify_product in batch:
         try:
+          existing_template = False
           product_id_str = str(shopify_product.get('id'))
-          variants = shopify_product.get('variants', []) or []
+          if isinstance(product_id_str, str) and '/' in product_id_str:
+            product_id_str = product_id_str.split('/')[-1]
+
+          # check for product.template if exists then skip
+          existing_template = self.env['product.template'].search(
+              [('shopify_external_id', '=', product_id_str)], limit=1)
+
+          if not existing_template:
+            existing_template = self.env['product.template'].search([
+                ('shopify_external_id', '=', False),
+                ('name', '=', shopify_product.get('title')),
+            ],
+                                                                    limit=1)
+          if existing_template and not existing_template.shopify_external_id:
+            self.env['product.template'].browse(existing_template.id).write(
+                {'shopify_external_id': product_id_str})
+
+          variants = shopify_product.get('variants', [])
+          if isinstance(variants, dict):
+            variants = variants.get('nodes', []) or []
+
           if not variants:
             continue
 
-          # Don't use base_price from first variant - we'll set each variant's price directly
-          meaningful_options = self._get_meaningful_options(shopify_product)
-          attribute_lines, attribute_info = self._prepare_attribute_data(meaningful_options)
-
-          image_data = False
-          image_src = (shopify_product.get('image') or {}).get('src')
-          if image_src:
-            try:
-              image_data = self._download_product_image(image_src)
-            except Exception as img_error:
-              _logger.warning(
-                  f"Failed to download image for product {shopify_product.get('title')}: {str(img_error)}"
-              )
-
-          existing_mappings = self.with_context(active_test=False).search([
-              ('shopify_product_id', '=', product_id_str), ('instance_id', '=', instance.id)
-          ])
-
-          # First, check if a product template exists with this Shopify ID
-          odoo_template = ProductTemplate.search([('shopify_external_id', '=', product_id_str)],
-                                                 limit=1)
-
-          # If not found by external ID, check existing mappings
-          if not odoo_template and existing_mappings:
-            odoo_template = existing_mappings[:1].odoo_product_id.product_tmpl_id
-
-          if odoo_template:
-            template_update_vals = {
-                'name': shopify_product.get('title', 'Unknown Product'),
-                'description': shopify_product.get('body_html', '') or '',
-                'shopify_external_id': product_id_str,  # Update external ID
-            }
-            if image_data:
-              template_update_vals['image_1920'] = image_data
-            odoo_template.write(template_update_vals)
-            # Don't update list_price for existing templates - it's managed by variants
-          else:
-            # For new products, set list_price to the MINIMUM variant price
-            # This serves as the base price, and other variants will have price_extra
-            min_price = 0.0
-            if variants:
-              try:
-                # Get all variant prices and find the minimum
-                variant_prices = [float(v.get('price', 0) or 0.0) for v in variants]
-                min_price = min(variant_prices) if variant_prices else 0.0
-              except (TypeError, ValueError):
-                min_price = 0.0
-
-            template_vals = {
-                'name': shopify_product.get('title', 'Unknown Product'),
-                'type': 'consu',
-                'categ_id': self.env.ref('product.product_category_all').id,
-                'description': shopify_product.get('body_html', '') or '',
-                'list_price': min_price,  # Set to minimum variant price
-                'taxes_id': [(5, 0, 0)],
-                'supplier_taxes_id': [(5, 0, 0)],
-                'is_storable': True,
-                'shopify_external_id': product_id_str,  # Store Shopify product ID
-            }
-            if image_data:
-              template_vals['image_1920'] = image_data
-            if attribute_lines:
-              template_vals['attribute_line_ids'] = attribute_lines
-            odoo_template = ProductTemplate.create(template_vals)
-
-          # Ensure template has all attribute lines/values from Shopify
-          self._ensure_template_attribute_lines(odoo_template, attribute_info)
-          odoo_template._create_variant_ids()
-
-          ptav_map = self._build_ptav_map(odoo_template)
-          mapping_by_variant = {
-              mapping.shopify_variant_id: mapping for mapping in existing_mappings
-          }
-
-          processed_variant_ids = set()
-
           for shopify_variant in variants:
+            existing_variant = False
             variant_id_str = str(shopify_variant.get('id'))
 
-            odoo_variant, variant_created = self._match_or_create_variant(
-                odoo_template, shopify_variant, meaningful_options, attribute_info, ptav_map)
+            existing_variant = self.env['product.product'].search(
+                [('shopify_external_id', '=', variant_id_str)], limit=1)
 
-            self._update_variant_from_shopify(odoo_variant, shopify_variant)
+            if not existing_variant:
+              existing_variant = self.env['product.product'].search([
+                  ('shopify_product_external_id', '=', product_id_str),
+              ],
+                                                                    limit=1)
 
-            mapping_vals = {
-                'name':
-                    shopify_variant.get('title') or shopify_product.get('title', 'Unknown Product'),
-                'shopify_product_id':
-                    product_id_str,
-                'shopify_variant_id':
-                    variant_id_str,
-                'odoo_product_id':
-                    odoo_variant.id,
-                'instance_id':
-                    instance.id,
-                'sync_status':
-                    'synced',
-                'last_sync':
-                    fields.Datetime.now(),
-                'sku':
-                    shopify_variant.get('sku', ''),
-                'stock_quantity':
-                    float(shopify_variant.get('inventory_quantity', 0) or 0.0),
-                'shopify_inventory_item_id':
-                    str(shopify_variant.get('inventory_item_id', '') or ''),
-                'product_color':
-                    self._extract_color_from_variant(meaningful_options, shopify_variant)
-                    or self._extract_color_from_options(shopify_product),
-                'warehouse_location':
-                    self._determine_warehouse_location(shopify_variant),
-                'active':
-                    True,
-            }
+            if not existing_variant:
+              existing_variant = self.env['product.product'].search([
+                  '|',
+                  ('default_code', '=', shopify_variant.get('sku', '')),
+                  ('name', '=', shopify_product.get('title')),
+              ],
+                                                                    limit=1)
+            if existing_variant and (not existing_variant.shopify_external_id or
+                                     not existing_variant.shopify_product_external_id):
+              self.env['product.product'].browse(existing_variant.id).write({
+                  'shopify_external_id': variant_id_str,
+                  'shopify_product_external_id': product_id_str,
+              })
 
-            variant_mapping = mapping_by_variant.get(variant_id_str)
-
-            if variant_mapping:
-              variant_mapping.write(mapping_vals)
-              if not variant_created:
-                updated_count += 1
+            if existing_variant and (existing_variant.shopify_external_id or
+                                     existing_variant.shopify_product_external_id):
+              continue
             else:
-              try:
-                _logger.info("Creating mapping for variant %s (product %s) on instance %s",
-                             variant_id_str, odoo_variant.id, instance.id)
-                variant_mapping = self.create(mapping_vals)
-                mapping_by_variant[variant_id_str] = variant_mapping
-                created_count += 1
-              except ValidationError as create_error:
-                # Likely unique constraint violation – fetch existing record and update it
-                _logger.warning(
-                    f"Mapping create failed for variant {variant_id_str}: {create_error}")
-                variant_mapping = self.with_context(active_test=False).search(
-                    [('shopify_variant_id', '=', variant_id_str),
-                     ('instance_id', '=', instance.id)],
-                    limit=1)
-                if variant_mapping:
-                  variant_mapping.write(mapping_vals)
-                  mapping_by_variant[variant_id_str] = variant_mapping
-                  updated_count += 1
-                else:
-                  error_count += 1
-                  continue
-
-            processed_variant_ids.add(variant_id_str)
-
-          # Deactivate mappings not present anymore
-          if existing_mappings:
-            unused_mappings = existing_mappings.filtered(
-                lambda m: m.shopify_variant_id and m.shopify_variant_id not in processed_variant_ids
-            )
-            if unused_mappings:
-              unused_mappings.write({'active': False})
+              _logger.exception("Product variant doesn't mapped name=%s,id=%s",
+                                shopify_variant.get('title'), shopify_variant.get('id'))
+              continue
 
         except Exception as e:
           error_count += 1
-          self.env['shopify.log'].create({
-              'name':
-                  'Product Import Error',
-              'log_type':
-                  'error',
-              'job_id':
-                  job.id,
-              'message':
-                  f"Error importing product {shopify_product.get('title', 'Unknown')}: {str(e)}",
-          })
-
-      job.write({'status': 'done'})
-      self.env['shopify.log'].create({
-          'name':
-              'Product Import Completed',
-          'log_type':
-              'info',
-          'job_id':
-              job.id,
-          'message':
-              f'Import completed: {created_count} created, {updated_count} updated, {error_count} errors',
-      })
-
-      return products
-
-    except Exception as e:
-      _logger.exception(f"Exception during product import from {instance.name}: {str(e)}")
-      job = self.env['shopify.queue.job'].create({
-          'name': f'Import Products ({instance.name})',
-          'job_type': 'import_product',
-          'instance_id': instance.id,
-          'status': 'failed',
-          'error_message': str(e),
-      })
-      self.env['shopify.log'].create({
-          'name': 'Product Import Exception',
-          'log_type': 'error',
-          'job_id': job.id,
-          'message': str(e),
-      })
-      raise UserError(_(f'Exception during product import: {str(e)}'))
-
-  def export_products_to_shopify(self, instance, products=None):
-    """
-        Export products to Shopify for the given instance.
-        Creates queue jobs and logs results.
-        """
-    if not instance:
-      raise UserError(_('No Shopify instance provided.'))
-
-    # If no products specified, get all non-synced products for this instance
-    if products is None:
-      products = self.search([('instance_id', '=', instance.id), ('sync_status', '!=', 'synced')])
-
-    job = self.env['shopify.queue.job'].create({
-        'name': f'Export Products ({instance.name})',
-        'job_type': 'export_product',
-        'instance_id': instance.id,
-        'status': 'in_progress',
-    })
-
-    self.env['shopify.log'].create({
-        'name':
-            'Product Export Started',
-        'log_type':
-            'info',
-        'job_id':
-            job.id,
-        'message':
-            f'Starting export of {len(products)} products to Shopify instance {instance.name}',
-    })
-
-    exported_count = 0
-    error_count = 0
-
-    for product_mapping in products:
-      try:
-        odoo_product = product_mapping.odoo_product_id
-
-        # Prepare product data for Shopify
-        product_data = {
-            'product': {
-                'title':
-                    odoo_product.name,
-                'body_html':
-                    odoo_product.description or '',
-                'vendor':
-                    odoo_product.company_id.name if odoo_product.company_id else 'Odoo',
-                'product_type':
-                    odoo_product.categ_id.name if odoo_product.categ_id else 'Default',
-                'tags':
-                    '',  # Can be customized based on specific requirements
-                'status':
-                    'active' if odoo_product.active else 'draft',
-                'variants': [{
-                    'price':
-                        str(odoo_product.list_price),
-                    'sku':
-                        odoo_product.default_code or '',
-                    'inventory_quantity':
-                        int(odoo_product.qty_available) if odoo_product.type == 'consu' else 0,
-                    'inventory_management':
-                        'shopify' if odoo_product.type == 'consu' else None,
-                    'weight':
-                        float(odoo_product.weight) if odoo_product.weight else 0,
-                    'weight_unit':
-                        'kg',
-                    'barcode':
-                        odoo_product.barcode or '',
-                }]
-            }
-        }
-
-        # Add product image if available
-        if odoo_product.image_1920:
-          import base64
+          _logger.exception('Error processing Shopify product %s: %s',
+                            shopify_product.get('id') if shopify_product else 'unknown', str(e))
           try:
-            image_b64 = base64.b64decode(odoo_product.image_1920)
-            # Upload image after product creation
-            product_data['product']['images'] = [{
-                'attachment': base64.b64encode(image_b64).decode('utf-8')
-            }]
-          except Exception as img_error:
-            _logger.warning(
-                f"Failed to prepare image for product {odoo_product.name}: {str(img_error)}")
+            # Rollback to clear failed transaction so further DB ops can continue
+            self.env.cr.rollback()
+          except Exception:
+            _logger.exception('Failed to rollback after exception')
 
-        # Use access_token if available, otherwise fall back to api_key/password
-        headers = {'Content-Type': 'application/json'}
-        if hasattr(instance, 'access_token') and instance.access_token:
-          headers['X-Shopify-Access-Token'] = instance.access_token
-          auth = None
-        else:
-          auth = (instance.api_key, instance.password)
+      # Commit and sleep between batches to avoid long-running DB transactions
+      try:
+        self.env.cr.commit()
+      except Exception:
+        _logger.exception('Failed to commit DB after processing batch')
 
-        # Check if product already exists in Shopify
-        if product_mapping.shopify_product_id:
-          # Update existing product
-          url = f"{instance.shop_url}/admin/api/2024-07/products/{product_mapping.shopify_product_id}.json"
-          if auth:
-            response = requests.put(url, auth=auth, json=product_data, timeout=20)
-          else:
-            response = requests.put(url, headers=headers, json=product_data, timeout=20)
-        else:
-          # Create new product
-          url = f"{instance.shop_url}/admin/api/2024-07/products.json"
-          if auth:
-            response = requests.post(url, auth=auth, json=product_data, timeout=20)
-          else:
-            response = requests.post(url, headers=headers, json=product_data, timeout=20)
+      # Sleep to avoid endpoint rate/timeouts and relieve DB
+      try:
+        time.sleep(getattr(instance, 'import_batch_sleep_seconds', 1))
+      except Exception:
+        pass
 
-        if response.status_code in [200, 201]:
-          response_data = response.json()
-          shopify_product = response_data.get('product', {})
-
-          # Update mapping with Shopify product ID and variant ID
-          update_vals = {
-              'shopify_product_id': str(shopify_product.get('id')),
-              'sync_status': 'synced',
-              'last_sync': fields.Datetime.now(),
-          }
-
-          # Update variant ID if available
-          variants = shopify_product.get('variants', [])
-          if variants:
-            update_vals['shopify_variant_id'] = str(variants[0].get('id'))
-
-          product_mapping.write(update_vals)
-          exported_count += 1
-
-          self.env['shopify.log'].create({
-              'name': 'Product Export Success',
-              'log_type': 'info',
-              'job_id': job.id,
-              'message': f'Successfully exported product {odoo_product.name} to Shopify',
-          })
-        else:
-          error_count += 1
-          self.env['shopify.log'].create({
-              'name':
-                  'Product Export Error',
-              'log_type':
-                  'error',
-              'job_id':
-                  job.id,
-              'message':
-                  f'Failed to export product {odoo_product.name} - HTTP {response.status_code}: {response.text}',
-          })
-
-      except Exception as e:
-        error_count += 1
-        self.env['shopify.log'].create({
-            'name':
-                'Product Export Exception',
-            'log_type':
-                'error',
-            'job_id':
-                job.id,
-            'message':
-                f'Exception exporting product {product_mapping.odoo_product_id.name}: {str(e)}',
-        })
-
-    # Update job status
-    job.write({'status': 'done'})
-    self.env['shopify.log'].create({
-        'name': 'Product Export Completed',
-        'log_type': 'info',
-        'job_id': job.id,
-        'message': f'Export completed: {exported_count} exported, {error_count} errors',
-    })
-
-    return True
-
-  def export_single_product_to_shopify(self, instance, odoo_product):
-    """
-        Export a single Odoo product to Shopify.
-        Creates a mapping if it doesn't exist.
-        """
-    if not instance:
-      raise UserError(_('No Shopify instance provided.'))
-
-    if not odoo_product:
-      raise UserError(_('No product provided.'))
-
-    # Check if product mapping already exists
-    existing_mapping = self.search([('odoo_product_id', '=', odoo_product.id),
-                                    ('instance_id', '=', instance.id)],
-                                   limit=1)
-
-    if not existing_mapping:
-      # Create new mapping
-      existing_mapping = self.create({
-          'name': odoo_product.name,
-          'shopify_product_id': '',  # Will be filled after successful export
-          'odoo_product_id': odoo_product.id,
-          'instance_id': instance.id,
-          'sync_status': 'pending',
-      })
-
-    # Export the product
-    return self.export_products_to_shopify(instance, existing_mapping)
+    # Return flattened list of fetched products (all batches)
+    products = [p for batch in product_batches for p in batch]
+    return products
 
   @api.model
   def _run_product_import_cron(self):
-    """
-        Cron job method to automatically import products from all active Shopify instances.
-        """
     instances = self.env['shopify.instance'].search([('active', '=', True),
                                                      ('state', '=', 'connected')])
     for instance in instances:
-      try:
-        self.import_products_from_shopify(instance)
-      except Exception as e:
-        self.env['shopify.log'].create({
-            'name': 'Cron Product Import Error',
-            'log_type': 'error',
-            'message': f'Error importing products for instance {instance.name}: {str(e)}',
-        })
-
-  @api.model
-  def _run_product_export_cron(self):
-    """
-        Cron job method to automatically export pending products to all active Shopify instances.
-        """
-    instances = self.env['shopify.instance'].search([('active', '=', True),
-                                                     ('state', '=', 'connected')])
-    for instance in instances:
-      try:
-        # Find products that need to be exported (pending or error status)
-        pending_products = self.search([('instance_id', '=', instance.id),
-                                        ('sync_status', 'in', ['pending', 'error'])])
-        if pending_products:
-          self.export_products_to_shopify(instance, pending_products)
-      except Exception as e:
-        self.env['shopify.log'].create({
-            'name': 'Cron Product Export Error',
-            'log_type': 'error',
-            'message': f'Error exporting products for instance {instance.name}: {str(e)}',
-        })
+      self.import_products_from_shopify(instance)
 
   def _get_meaningful_options(self, shopify_product):
     """Return Shopify options that represent real variants (skip default title)."""
@@ -742,6 +389,8 @@ class ShopifyProduct(models.Model):
     variant_vals = {
         'product_tmpl_id': template.id,
         'shopify_external_id': variant_id_str,  # Store Shopify variant ID
+        'default_code': shopify_variant.get('sku', ''),
+        'barcode': shopify_variant.get('barcode', ''),
     }
     if ptav_ids:
       variant_vals['product_template_attribute_value_ids'] = [(6, 0, ptav_ids)]
@@ -888,122 +537,6 @@ class ShopifyProduct(models.Model):
       _logger.warning(f"Error determining warehouse location: {str(e)}")
       return 'online'
 
-  def sync_product_to_shopify(self, instance):
-    """Bi-directional sync: Update product in Shopify with latest Odoo data"""
-    self.ensure_one()
-
-    if not self.shopify_product_id:
-      _logger.warning(f"Cannot sync product {self.name} - no Shopify product ID")
-      return False
-
-    odoo_product = self.odoo_product_id
-
-    # Prepare update data
-    update_data = {
-        'product': {
-            'id':
-                int(self.shopify_product_id),
-            'title':
-                odoo_product.name,
-            'body_html':
-                odoo_product.description or '',
-            'status':
-                'active' if odoo_product.active else 'draft',
-            'variants': [{
-                'id':
-                    int(self.shopify_variant_id) if self.shopify_variant_id else None,
-                'price':
-                    str(odoo_product.list_price),
-                'sku':
-                    odoo_product.default_code or '',
-                'inventory_quantity':
-                    int(odoo_product.qty_available) if odoo_product.type == 'product' else 0,
-            }]
-        }
-    }
-
-    url = f"{instance.shop_url}/admin/api/2024-07/products/{self.shopify_product_id}.json"
-
-    try:
-      headers = {'Content-Type': 'application/json'}
-      if hasattr(instance, 'access_token') and instance.access_token:
-        headers['X-Shopify-Access-Token'] = instance.access_token
-        response = requests.put(url, headers=headers, json=update_data, timeout=30)
-      else:
-        response = requests.put(url,
-                                auth=(instance.api_key, instance.password),
-                                json=update_data,
-                                timeout=30)
-
-      if response.status_code == 200:
-        self.write({
-            'sync_status': 'synced',
-            'last_sync': fields.Datetime.now(),
-        })
-        _logger.info(f"Successfully synced product {self.name} to Shopify")
-        return True
-      else:
-        _logger.error(
-            f"Failed to sync product {self.name}: {response.status_code} - {response.text}")
-        self.write({'sync_status': 'error'})
-        return False
-    except Exception as e:
-      _logger.error(f"Exception syncing product {self.name}: {str(e)}")
-      self.write({'sync_status': 'error'})
-      return False
-
-  # def sync_product_from_shopify(self, instance):
-  #   """Bi-directional sync: Update Odoo product with latest Shopify data"""
-  #   self.ensure_one()
-
-  #   if not self.shopify_product_id:
-  #     _logger.warning(f"Cannot sync product {self.name} - no Shopify product ID")
-  #     return False
-
-  #   url = f"{instance.shop_url}/admin/api/2024-07/products/{self.shopify_product_id}.json"
-
-  #   try:
-  #     headers = {'Content-Type': 'application/json'}
-  #     if hasattr(instance, 'access_token') and instance.access_token:
-  #       headers['X-Shopify-Access-Token'] = instance.access_token
-  #       response = requests.get(url, headers=headers, timeout=20)
-  #     else:
-  #       response = requests.get(url, auth=(instance.api_key, instance.password), timeout=20)
-
-  #     if response.status_code == 200:
-  #       shopify_product = response.json().get('product', {})
-  #       variant = shopify_product.get('variants', [{}])[0]
-
-  #       # Update Odoo product
-  #       update_vals = {
-  #           'name': shopify_product.get('title', self.odoo_product_id.name),
-  #           'list_price': float(variant.get('price', 0)),
-  #           'description': shopify_product.get('body_html', ''),
-  #           'default_code': variant.get('sku', ''),
-  #       }
-  #       self.odoo_product_id.write(update_vals)
-
-  #       # Update mapping fields
-  #       mapping_vals = {
-  #           'sku': variant.get('sku', ''),
-  #           'stock_quantity': float(variant.get('inventory_quantity', 0)),
-  #           'shopify_inventory_item_id': str(variant.get('inventory_item_id', '')),
-  #           'product_color': self._extract_color_from_options(shopify_product),
-  #           'warehouse_location': self._determine_warehouse_location(variant),
-  #           'sync_status': 'synced',
-  #           'last_sync': fields.Datetime.now(),
-  #       }
-  #       self.write(mapping_vals)
-
-  #       _logger.info(f"Successfully synced product {self.name} from Shopify")
-  #       return True
-  #     else:
-  #       _logger.error(f"Failed to fetch product {self.name} from Shopify: {response.status_code}")
-  #       return False
-  #   except Exception as e:
-  #     _logger.error(f"Exception syncing product {self.name} from Shopify: {str(e)}")
-  #     return False
-
   def action_sync_from_shopify(self):
     """Action to sync products from Shopify"""
     for product_mapping in self:
@@ -1017,24 +550,6 @@ class ShopifyProduct(models.Model):
         'params': {
             'title': 'Shopify Sync',
             'message': f'Synced {len(self)} product(s) from Shopify',
-            'type': 'success',
-            'sticky': False,
-        },
-    }
-
-  def action_sync_to_shopify(self):
-    """Action to sync products to Shopify"""
-    for product_mapping in self:
-      instance = product_mapping.instance_id
-      if instance:
-        product_mapping.sync_product_to_shopify(instance)
-
-    return {
-        'type': 'ir.actions.client',
-        'tag': 'display_notification',
-        'params': {
-            'title': 'Shopify Sync',
-            'message': f'Synced {len(self)} product(s) to Shopify',
             'type': 'success',
             'sticky': False,
         },
@@ -1055,7 +570,7 @@ class ShopifyProduct(models.Model):
           continue
 
         # Fetch inventory levels for this inventory item
-        url = f"{instance.shop_url}/admin/api/2024-07/inventory_levels.json?inventory_item_ids={mapping.shopify_inventory_item_id}"
+        url = f"{instance.shop_url}/admin/api/2024-10/inventory_levels.json?inventory_item_ids={mapping.shopify_inventory_item_id}"
 
         headers = {'Content-Type': 'application/json'}
         if hasattr(instance, 'access_token') and instance.access_token:
@@ -1087,7 +602,7 @@ class ShopifyProduct(models.Model):
   def _fetch_location_details(self, instance, mapping, location_id):
     """Fetch location details to determine if it's a warehouse, retail, etc."""
     try:
-      url = f"{instance.shop_url}/admin/api/2024-07/locations/{location_id}.json"
+      url = f"{instance.shop_url}/admin/api/2024-10/locations/{location_id}.json"
 
       headers = {'Content-Type': 'application/json'}
       if hasattr(instance, 'access_token') and instance.access_token:

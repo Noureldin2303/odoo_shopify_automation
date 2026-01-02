@@ -68,7 +68,6 @@ class ShopifyAnalytics(models.Model):
     
     # AI Insights
     ai_insights = fields.Text('AI Insights', compute='_compute_ai_insights')
-    risk_alerts = fields.Text('Risk Alerts', compute='_compute_ai_insights')
     optimization_recommendations = fields.Text('Optimization Recommendations', compute='_compute_ai_insights')
     
     # Chart Data
@@ -203,10 +202,6 @@ class ShopifyAnalytics(models.Model):
             # Generate AI insights
             insights = self._generate_ai_insights(record)
             record.ai_insights = json.dumps(insights)
-            
-            # Generate risk alerts
-            risks = self._generate_risk_alerts(record)
-            record.risk_alerts = json.dumps(risks)
             
             # Generate optimization recommendations
             recommendations = self._generate_optimization_recommendations(record)
@@ -461,24 +456,6 @@ class ShopifyAnalytics(models.Model):
         
         return insights
 
-    def _generate_risk_alerts(self, record):
-        """Generate risk alerts"""
-        risks = []
-        
-        # Stockout risks
-        if record.stockout_incidents > 10:
-            risks.append("High stockout incidents - review inventory management")
-        
-        # Customer satisfaction risks
-        if record.customer_satisfaction_score < 3.5:
-            risks.append("Low customer satisfaction - investigate service issues")
-        
-        # Financial risks
-        if record.net_profit_margin < 5:
-            risks.append("Low profit margin - review pricing and costs")
-        
-        return risks
-
     def _generate_optimization_recommendations(self, record):
         """Generate optimization recommendations"""
         recommendations = []
@@ -602,7 +579,6 @@ class ShopifyAnalytics(models.Model):
                     'customer_lifetime_value': record.customer_lifetime_value,
                 },
                 'ai_insights': json.loads(record.ai_insights or '[]'),
-                'risk_alerts': json.loads(record.risk_alerts or '[]'),
                 'recommendations': json.loads(record.optimization_recommendations or '[]'),
             }
             

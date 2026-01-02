@@ -43,14 +43,6 @@
             <field name="comment">Developer access for webhook management and API configuration</field>
         </record>
 
-        <!-- Shopify Finance Group -->
-        <record id="group_shopify_finance" model="res.groups">
-            <field name="name">Shopify Finance</field>
-            <field name="category_id" ref="base.module_category_sales_sales"/>
-            <field name="implied_ids" eval="[(4, ref('group_shopify_user'))]"/>
-            <field name="comment">Access to financial features and payout management</field>
-        </record>
-
         <!-- Shopify Operations Group -->
         <record id="group_shopify_operations" model="res.groups">
             <field name="name">Shopify Operations</field>
