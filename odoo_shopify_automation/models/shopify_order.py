@@ -218,7 +218,7 @@ class ShopifyOrder(models.Model):
                 except:
                   created_at = None
 
-              config_id = self._get_pos_config_for_address(shopify_order)
+              config_id = self._get_pos_config_for_address(shopify_order, instance)
 
               warehouse = self._get_pos_warehouse_for_address(shopify_order)
 
@@ -430,20 +430,42 @@ class ShopifyOrder(models.Model):
         }
     }
 
-  def _get_pos_config_for_address(self, shopify_order):
-    location_id = shopify_order.get('location_id', False)
+  def _get_pos_config_for_address(self, shopify_order, instance):
+    order_id = shopify_order.get('id', False)
     pos_config = False
 
-    if location_id:
-      pos_config = self.env['pos.config'].search([('shopify_location_id', '=', str(location_id))],
-                                                 limit=1)
-    else:
-      fulfillments = shopify_order.get('fulfillments', [])
-      if fulfillments:
-        location_id = fulfillments[0].get('location_id', False)
+    base_url = f"{instance.shop_url}/admin/api/2024-10/orders/{order_id}/fulfillment_orders.json?limit=1"
 
-      if pos_config:
-        return pos_config
+    try:
+      headers = {'Content-Type': 'application/json'}
+      if hasattr(instance, 'access_token') and instance.access_token:
+        headers['X-Shopify-Access-Token'] = instance.access_token
+        response = requests.get(base_url, headers=headers, timeout=20)
+      else:
+        response = requests.get(base_url, auth=(instance.api_key, instance.password), timeout=20)
+
+      if response.status_code != 200:
+        _logger.error(
+            f"Failed to fetch fulfillment orders from Shopify: {response.status_code}")
+        return False
+
+      fulfillment_orders = response.json().get('fulfillment_orders', [])
+  
+      if fulfillment_orders:
+        location_id = fulfillment_orders[0].get('assigned_location_id', False)
+
+        if not location_id:
+          location_id = fulfillment_orders[0].get('assigned_location', {}).get('location_id', False)
+  
+        if location_id:
+          pos_config = self.env['pos.config'].search(
+              [('shopify_location_id', '=', str(location_id))],
+              limit=1)
+          if pos_config:
+            return pos_config
+  
+    except Exception as e:
+      _logger.error(f"Exception fetching fulfillment orders from Shopify: {str(e)}")
 
     return False
 
