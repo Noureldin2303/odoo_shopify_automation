@@ -105,15 +105,18 @@ class ShopifyOrder(models.Model):
       auth = (instance.api_key, instance.password)
 
     created_count = 0
-    updated_count = 0
+    # updated_count = 0
     error_count = 0
     total_orders = 0
     last_id = since_id
     all_orders = []
 
+    # get toda's date
+    today_date = fields.Date.context_today(self)
+
     try:
       while True:
-        params = {'limit': 1, 'status': 'any'}
+        params = {'limit': 250, 'status': 'any', 'created_at_min': today_date}
         if last_id:
           params['since_id'] = last_id
 
@@ -429,31 +432,25 @@ class ShopifyOrder(models.Model):
 
   def _get_pos_config_for_address(self, shopify_order):
     location_id = shopify_order.get('location_id', False)
-
-    if not location_id:
-      fulfillments = shopify_order.get('fulfillments', [])
-      if fulfillments:
-        location_id = fulfillments[0].get('location_id', False)
-      else:
-        location = shopify_order.get('shipping_address', {}).get('city', '')
-        if location:
-          if location.strip().lower() == "alexandria":
-            location_id = 1234567890
+    pos_config = False
 
     if location_id:
       pos_config = self.env['pos.config'].search([('shopify_location_id', '=', str(location_id))],
                                                  limit=1)
+    else:
+      fulfillments = shopify_order.get('fulfillments', [])
+      if fulfillments:
+        location_id = fulfillments[0].get('location_id', False)
 
       if pos_config:
         return pos_config
 
-    # Fallback to any active POS config
-    return self.env['pos.config'].search([('active', '=', True)], limit=1)
+    return False
 
   def _get_pos_warehouse_for_address(self, shopify_order):
     config = self._get_pos_config_for_address(shopify_order)
 
-    if config.picking_type_id:
+    if config and config.picking_type_id:
       return config.picking_type_id.warehouse_id
 
-    raise UserError(_("No warehouse configured for POS config '%s' or Shopify instance.") % config.name)
+    return False
