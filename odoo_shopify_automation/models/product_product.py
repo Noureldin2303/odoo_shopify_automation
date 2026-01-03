@@ -24,7 +24,7 @@ class ProductProduct(models.Model):
                                     index=True,
                                     copy=False)
   shopify_product_external_id = fields.Char(
-      'Shopify Product ID',
+      ' Shopify Product ID ',
       related='shopify_product_mapping_id.shopify_product_id',
       store=True,
       index=True,

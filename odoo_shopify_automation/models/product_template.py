@@ -14,7 +14,7 @@ class ProductTemplate(models.Model):
       'If enabled, this product template will be automatically synced to all active Shopify instances'
   )
   shopify_external_id = fields.Char(
-      'Shopify Product ID',
+      'Shopify Product ID ',
       help='External Shopify Product ID for synchronization',
       index=True,
       copy=False,
