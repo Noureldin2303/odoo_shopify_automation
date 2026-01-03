@@ -220,7 +220,7 @@ class ShopifyOrder(models.Model):
 
               config_id = self._get_pos_config_for_address(shopify_order, instance)
 
-              warehouse = self._get_pos_warehouse_for_address(shopify_order)
+              warehouse = self._get_pos_warehouse_for_address(shopify_order, instance)
 
               order_vals = {
                   'partner_id': customer.id if customer else self.env.ref('base.partner_admin').id,
@@ -469,8 +469,8 @@ class ShopifyOrder(models.Model):
 
     return False
 
-  def _get_pos_warehouse_for_address(self, shopify_order):
-    config = self._get_pos_config_for_address(shopify_order)
+  def _get_pos_warehouse_for_address(self, shopify_order, instance):
+    config = self._get_pos_config_for_address(shopify_order, instance)
 
     if config and config.picking_type_id:
       return config.picking_type_id.warehouse_id
